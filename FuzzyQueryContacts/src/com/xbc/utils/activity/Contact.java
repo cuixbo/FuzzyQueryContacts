@@ -13,11 +13,16 @@ public class Contact {
 		this.name = name;
 		this.number = number;
 		this.sortKey = sortKey;
+		if(number!=null){
+			this.simpleNumber=number.replaceAll("\\-|\\s", "");
+		}
 	}
 
 	public String name;
 	public String number;
+	public String simpleNumber;
 	public String sortKey;
+
 
 	@Override
 	public int hashCode() {

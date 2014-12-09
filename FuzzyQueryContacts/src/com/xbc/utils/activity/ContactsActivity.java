@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2012 yueyueniao
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.xbc.utils.activity;
 
 import java.util.ArrayList;
@@ -63,7 +48,6 @@ public class ContactsActivity extends Activity {
 	 * 根据拼音来排列ListView里面的数据类
 	 */
 	private PinyinComparator pinyinComparator;
-
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -140,9 +124,7 @@ public class ContactsActivity extends Activity {
 			public void onItemClick(AdapterView<?> adapterView, View view, int position, long arg3) {
 				ViewHolder viewHolder = (ViewHolder) view.getTag();
 				viewHolder.cbChecked.performClick();
-				adapter.toggleChecked(position);//-1是因为添加了headview
-				//				Toast.makeText(getApplicationContext(),
-				//						((SortModel) adapterView.getAdapter().getItem(position)).number, Toast.LENGTH_SHORT).show();
+				adapter.toggleChecked(position);
 			}
 		});
 
@@ -173,7 +155,6 @@ public class ContactsActivity extends Activity {
 					ContentResolver resolver = getApplicationContext().getContentResolver();
 					Cursor phoneCursor = resolver.query(Phone.CONTENT_URI, new String[] { Phone.DISPLAY_NAME, Phone.NUMBER, "sort_key" }, null, null, "sort_key COLLATE LOCALIZED ASC");
 					if (phoneCursor == null || phoneCursor.getCount() == 0) {
-						//未获取到读取联系人权限
 						Toast.makeText(getApplicationContext(), "未获得读取联系人权限 或 未获得联系人数据", Toast.LENGTH_SHORT).show();
 						return;
 					}
@@ -260,18 +241,20 @@ public class ContactsActivity extends Activity {
 	 * @return
 	 */
 	private List<SortModel> search(String str) {
-		List<SortModel> filterList = new ArrayList<SortModel>();//过滤后的list
-		if (str.matches("^([0-9]|[/+])*$")) {//正则表达式 匹配号码
+		List<SortModel> filterList = new ArrayList<SortModel>();// 过滤后的list
+		//if (str.matches("^([0-9]|[/+])*$")) {// 正则表达式 匹配号码
+		if (str.matches("^([0-9]|[/+]).*")) {// 正则表达式 匹配以数字或者加号开头的字符串(包括了带空格及-分割的号码)
+			String simpleStr = str.replaceAll("\\-|\\s", "");
 			for (SortModel contact : mAllContactsList) {
 				if (contact.number != null && contact.name != null) {
-					if (contact.number.contains(str) || contact.name.contains(str)) {
+					if (contact.simpleNumber.contains(simpleStr) || contact.name.contains(str)) {
 						if (!filterList.contains(contact)) {
 							filterList.add(contact);
 						}
 					}
 				}
 			}
-		} else {
+		}else {
 			for (SortModel contact : mAllContactsList) {
 				if (contact.number != null && contact.name != null) {
 					//姓名全匹配,姓名首字母简拼匹配,姓名全字母匹配
