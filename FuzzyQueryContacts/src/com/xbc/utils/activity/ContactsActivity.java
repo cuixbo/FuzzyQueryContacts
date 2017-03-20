@@ -8,6 +8,7 @@ import java.util.Locale;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.database.Cursor;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.text.Editable;
@@ -39,14 +40,10 @@ public class ContactsActivity extends Activity {
 
 	private List<SortModel> mAllContactsList;
 	private ContactsSortAdapter adapter;
-	/**
-	 * 汉字转换成拼音的类
-	 */
+	/** 汉字转换成拼音的类 */
 	private CharacterParser characterParser;
 
-	/**
-	 * 根据拼音来排列ListView里面的数据类
-	 */
+	/** 根据拼音来排列ListView里面的数据类 */
 	private PinyinComparator pinyinComparator;
 
 	@Override
@@ -177,7 +174,12 @@ public class ContactsActivity extends Activity {
 								sortLetters = getSortLetter(contactName);
 							}
 							sortModel.sortLetters = sortLetters;
-							sortModel.sortToken = parseSortKey(sortKey);
+
+							if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+								sortModel.sortToken = parseSortKey(sortKey);
+							else
+								sortModel.sortToken = parseSortKeyLollipop(sortKey);
+
 							mAllContactsList.add(sortModel);
 						}
 					}
@@ -231,6 +233,9 @@ public class ContactsActivity extends Activity {
 		// 正则表达式，判断首字母是否是英文字母
 		if (sortString.matches("[A-Z]")) {
 			letter = sortString.toUpperCase(Locale.CHINESE);
+		} else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {// 5.0以上需要判断汉字
+			if (sortString.matches("^[\u4E00-\u9FFF]+$"))// 正则表达式，判断是否为汉字
+				letter = getSortLetter(sortString.toUpperCase(Locale.CHINESE));
 		}
 		return letter;
 	}
@@ -258,10 +263,19 @@ public class ContactsActivity extends Activity {
 			for (SortModel contact : mAllContactsList) {
 				if (contact.number != null && contact.name != null) {
 					//姓名全匹配,姓名首字母简拼匹配,姓名全字母匹配
-					if (contact.name.toLowerCase(Locale.CHINESE).contains(str.toLowerCase(Locale.CHINESE))
-							|| contact.sortKey.toLowerCase(Locale.CHINESE).replace(" ", "").contains(str.toLowerCase(Locale.CHINESE))
-							|| contact.sortToken.simpleSpell.toLowerCase(Locale.CHINESE).contains(str.toLowerCase(Locale.CHINESE))
-							|| contact.sortToken.wholeSpell.toLowerCase(Locale.CHINESE).contains(str.toLowerCase(Locale.CHINESE))) {
+					boolean isNameContains = contact.name.toLowerCase(Locale.CHINESE)
+							.contains(str.toLowerCase(Locale.CHINESE));
+
+					boolean isSortKeyContains = contact.sortKey.toLowerCase(Locale.CHINESE).replace(" ", "")
+							.contains(str.toLowerCase(Locale.CHINESE));
+
+					boolean isSimpleSpellContains = contact.sortToken.simpleSpell.toLowerCase(Locale.CHINESE)
+							.contains(str.toLowerCase(Locale.CHINESE));
+
+					boolean isWholeSpellContains = contact.sortToken.wholeSpell.toLowerCase(Locale.CHINESE)
+							.contains(str.toLowerCase(Locale.CHINESE));
+
+					if (isNameContains || isSortKeyContains || isSimpleSpellContains || isWholeSpellContains) {
 						if (!filterList.contains(contact)) {
 							filterList.add(contact);
 						}
@@ -272,7 +286,8 @@ public class ContactsActivity extends Activity {
 		return filterList;
 	}
 
-	String chReg = "[\\u4E00-\\u9FA5]+";//中文字符串匹配
+	/** 中文字符串匹配 */
+	String chReg = "[\\u4E00-\\u9FA5]+";
 
 	//String chReg="[^\\u4E00-\\u9FA5]";//除中文外的字符匹配
 	/**
@@ -292,6 +307,31 @@ public class ContactsActivity extends Activity {
 					token.wholeSpell += enStrs[i];
 				}
 			}
+		}
+		return token;
+	}
+
+	/**
+	 * 解析sort_key,封装简拼,全拼。
+	 * Android 5.0 以上使用
+	 * @param sortKey
+	 * @return
+	 */
+	public SortToken parseSortKeyLollipop(String sortKey) {
+		SortToken token = new SortToken();
+		if (sortKey != null && sortKey.length() > 0) {
+			boolean isChinese = sortKey.matches(chReg);
+			// 分割条件：中文不分割，英文以大写和空格分割
+			String regularExpression = isChinese ? "" : "(?=[A-Z])|\\s";
+
+			String[] enStrs = sortKey.split(regularExpression);
+
+			for (int i = 0, length = enStrs.length; i < length; i++)
+				if (enStrs[i].length() > 0) {
+					//拼接简拼
+					token.simpleSpell += getSortLetter(String.valueOf(enStrs[i].charAt(0)));
+					token.wholeSpell += characterParser.getSelling(enStrs[i]);
+				}
 		}
 		return token;
 	}
