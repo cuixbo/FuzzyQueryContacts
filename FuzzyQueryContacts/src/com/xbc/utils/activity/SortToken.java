@@ -5,7 +5,14 @@ package com.xbc.utils.activity;
  *
  */
 public class SortToken {
-	public String simpleSpell = "";//简拼
-	public String wholeSpell = "";//全拼
-	public String chName = "";//中文全名
+	/** 简拼 */
+	public String simpleSpell = "";
+	/** 全拼 */
+	public String wholeSpell = "";
+	/** 中文全名 */
+	public String chName = "";
+	@Override
+	public String toString() {
+		return "[simpleSpell=" + simpleSpell + ", wholeSpell=" + wholeSpell + ", chName=" + chName + "]";
+	}
 }
